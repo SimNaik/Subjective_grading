@@ -10,6 +10,7 @@ import base64
 from io import BytesIO
 import numpy as np
 import cv2
+import time  # Importing time module
 
 # === Load API Key ===
 load_dotenv()
@@ -39,33 +40,13 @@ diagrams: [
 pages: [2]
 }
 ]
-
-Important Rules:
-- The output must be a list of such question-answer objects.
-- Each object must contain:
-  - question_number in increasing order which is the question number of the content,Question numbers may appear in various formats—such as compound forms like 11. (1), 11. (2), or simple forms like 7, 8, 9. Always preserve the original numbering exactly as it appears in the document..
-  - ocr_text: complete question (including the question number present) and answer content, including <diagram_1> if any diagram exists.
-  - diagrams: 
-     - If diagram exists → write: id: 'diagram_1', coordinates: 'n/a', and appropriate diagram_class ('graph' or 'diagram').
-     - If no diagram → set: id: 'n/a', coordinates: 'n/a', diagram_class: 'n/a'.
-  - pages: The page number of the content ,Must always be shown as a list of integers in square brackets.
-
-- Understand the context to group full question-answer blocks together.
-- Maintain the output structure and avoid inserting extra commentary or descriptions.
-- Any text that is struck through (strikethrough formatting) must be completely ignored and excluded from the output.
 """
 
 # === Resize Image Function ===
 def resize_image(image, dim=768, save_path=None):
-    # Convert image to array if not already in array format
     image1 = np.array(image.convert('RGB'))  # Ensure the image is in RGB mode
-    
-    # Save the original size of the image
     original_size = image1.shape  # (height, width, channels)
-    
-    # Convert image to grayscale (for simplicity, keep this part)
     image1 = image1.mean(axis=2)  # Convert image to grayscale
-    
     h, w = image1.shape
     if w > h:
         new_w = dim
@@ -73,18 +54,11 @@ def resize_image(image, dim=768, save_path=None):
     else:
         new_h = dim
         new_w = int(w * (dim / h))
-    
-    # Resize the image
     resized_image = cv2.resize(image1, (new_w, new_h), interpolation=cv2.INTER_AREA)
-    
-    # Convert back to Image format and ensure it is in 'RGB' mode before saving
     resized_image_pil = Image.fromarray(resized_image)
     resized_image_pil = resized_image_pil.convert('RGB')  # Convert to RGB before saving
-    
-    # Save resized image to the given path
     if save_path:
         resized_image_pil.save(save_path)
-
     return original_size, (new_h, new_w), resized_image_pil
 
 # Streamlit Configuration
@@ -124,15 +98,26 @@ if uploaded_file:
 
     st.info("🔄 Converting PDF to images...")
     doc = fitz.open(pdf_path)
+
+    resized_images = []  # List to store resized image objects
+
+    # Save images directly in the main folder and resize them
     for page_num in range(len(doc)):
         page = doc.load_page(page_num)
         pix = page.get_pixmap(dpi=300)
-        img_path = os.path.join(folder_path, f"page_{page_num+1}.jpeg")
-        pix.save(img_path)
 
-        # Resize the image before saving
-        image_pil = Image.open(img_path)  # Open the image from the file path
-        original_size, new_size, resized_image = resize_image(image_pil, dim=768, save_path=img_path)
+        # Save the images directly inside the main folder (no model subfolders for images)
+        img_path = os.path.join(folder_path, f"page_{page_num + 1}.jpeg")
+        pix.save(img_path)  # Save image for both models (no need for model subfolders)
+
+        # Open the image and resize it
+        original_size, new_size, resized_image = resize_image(Image.open(img_path), dim=768)
+
+        # Display the resize information in Streamlit
+        st.write(f"**Original Image Size (Page {page_num + 1}):** {original_size[0]}x{original_size[1]}")
+        st.write(f"**Resized Image Size (Page {page_num + 1}):** {new_size[0]}x{new_size[1]}")
+
+        resized_images.append(resized_image)  # Add resized image to list
 
     images = load_images(folder_path, len(doc))
     images_b64 = load_base64_images(folder_path, len(doc))
@@ -144,18 +129,29 @@ results = []
 if uploaded_file:
     st.info("🤖 Sending images to Gemini …")
     json_path = os.path.join(folder_path, "output.json") if folder_path else ""
-    if images:
+    
+    # Start time tracking for total OCR process
+    start_time = time.time()
+    
+    # Send images in batch (all resized images at once)
+    if resized_images:
         try:
-            image_objects = [Image.open(p) for p in images]
-            for image in image_objects:
-                # Resize the image
-                _, _, resized_image = resize_image(image, dim=768, save_path=None)  # Not saving again here
-                response = model.generate_content([PROMPT, resized_image])  # Assuming model accepts single image + prompt
-                raw = response.text.strip()
-                st.write(f"Raw Response from Gemini: {raw}")
-                cleaned = raw.strip('```json').strip('```').strip()
-                parsed = json.loads(cleaned)
-                results.append(parsed)
+            # Resize all images before sending them to Gemini (resize step already done above)
+            resized_images_objs = resized_images  # List of resized images
+            
+            # Send all images in a batch to Gemini
+            response = model.generate_content([PROMPT] + resized_images_objs)  # Batch processing
+            
+            # Capture time after batch processing
+            end_time = time.time()
+            total_processing_time = end_time - start_time
+            st.write(f"Raw Response from Gemini: {response.text}")
+
+            # Process the response
+            raw = response.text.strip()
+            cleaned = raw.strip('```json').strip('```').strip()
+            parsed = json.loads(cleaned)
+            results.extend(parsed)
         except Exception as e:
             st.warning(f"❌ Failed to process images: {e}")
     else:
@@ -164,6 +160,14 @@ if uploaded_file:
     if json_path and results:
         with open(json_path, "w") as f:
             json.dump(results, f, indent=3)
+
+    # End time tracking for total OCR process
+    st.info(f"Total processing time: {total_processing_time:.2f} seconds")
+
+    # Save the timings in a text file
+    time_log_path = os.path.join(folder_path, f"{model_name}_timing.txt")
+    with open(time_log_path, "w") as log_file:
+        log_file.write(f"Total time taken for OCR: {total_processing_time:.2f} seconds\n")
 
 # Display Resized Image in Streamlit
 BOX_HEIGHT = 1000  # fixed height for the image display
@@ -178,47 +182,34 @@ with col1:
         st.info("📂 Please upload a PDF to see the preview here.")
     else:
         if images_b64:
-            # ── Navigation Row ───────────────────────────
+            # Navigation buttons for pages
             nav1, nav2, nav3 = st.columns([1, 2, 1])
-
-            # Previous Button
             with nav1:
                 if st.button("⬅️ Previous", key="prev_btn") and st.session_state.current_page > 0:
-                    st.session_state.current_page -= 1  # Update current page
-
-            # Page Selection Dropdown
+                    st.session_state.current_page -= 1
             with nav2:
-                # Dropdown for selecting a page, setting current page as default
-                selected_page = st.selectbox(
-                    "Select Page", 
-                    range(1, len(images_b64) + 1),  # range of pages 1 to N
-                    index=st.session_state.current_page,  # default to the current page
-                    key="page_dropdown"
-                )
-                # Update current page based on the dropdown selection
-                if selected_page != (st.session_state.current_page + 1):
-                    st.session_state.current_page = selected_page - 1  # convert to 0-index
-
-            # Next Button
+                st.markdown(f"**Page {st.session_state.current_page + 1} of {len(images_b64)}**")
             with nav3:
                 if st.button("Next ➡️", key="next_btn") and st.session_state.current_page < len(images_b64) - 1:
-                    st.session_state.current_page += 1  # Update current page
-            # ─────────────────────────────────────────────
+                    st.session_state.current_page += 1
 
-            # Now render the image for the (possibly) updated page
-            b64 = images_b64[st.session_state.current_page]
-            img_html = f"""
-            <img src="data:image/jpeg;base64,{b64}"
-                 style="height:{BOX_HEIGHT}px; width:100%; object-fit:contain;" />
-            """
-            components.html(img_html, height=BOX_HEIGHT)
+            # Set the path to the resized image for the current page
+            resized_img_path_1 = os.path.join(folder_path, f"page_{st.session_state.current_page + 1}.jpeg")
 
+            # Display the resized image directly from the file path
+            if os.path.exists(resized_img_path_1):
+                st.image(resized_img_path_1, use_column_width=True, caption=f"Resized Image (Page {st.session_state.current_page + 1})")
+            else:
+                st.warning(f"❌ Resized image for page {st.session_state.current_page + 1} not found.")
         else:
             st.warning("❌ No images available")
 
-# ---------- Column 2 (unchanged) ----------
+
+# ---------- Column 2 (JSON Output) ----------
 with col2:
     st.subheader("🧠 Extracted JSON")
+
+    # Display extracted JSON data for the batch processed images
     json_str = json.dumps(results, indent=2)
     box_html = f"""
     <div style="

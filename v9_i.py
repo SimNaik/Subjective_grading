@@ -1,5 +1,3 @@
-#this is for model 1 only where the image is sent in batch to only one model and the images are resized to 768
-
 import streamlit as st
 import os
 import fitz  # PyMuPDF
@@ -15,7 +13,7 @@ import cv2
 
 # === Load API Key ===
 load_dotenv()
-model_name = "gemini-2.5-flash"
+model_name = "gemini-2.5-pro"
 genai.configure(api_key=os.getenv("GOOGLE_GEMINI_API"))
 model = genai.GenerativeModel(model_name)
 
@@ -29,23 +27,32 @@ Output only the extracted text content in the following format for an example:
 
 [
 {
-  question_number: 1,
-  ocr_text: 'This is the PV curve <diagram_1>',
-  diagrams: [
-    { id: 'diagram_1', coordinates: 'n/a', diagram_class: 'graph or diagram' }
-  ],
-  pages: [2]
+question_number: 1,
+ocr_text: 'This is the PV curve <diagram_1>',
+diagrams: [
+  {
+    id: 'diagram_1',
+    coordinates: 'n/a',
+    diagram_class: 'graph or diagram'
+  }
+],
+pages: [2]
 }
 ]
 
 Important Rules:
 - The output must be a list of such question-answer objects.
 - Each object must contain:
-  - question_number in increasing order (preserve original numbering exactly).
-  - ocr_text: full question-answer text, including <diagram_*> tags.
-  - diagrams: id, coordinates, diagram_class ('graph','diagram', or 'n/a').
-  - pages: list of integers.
-- Ignore any struck-through text.
+  - question_number in increasing order which is the question number of the content,Question numbers may appear in various formats—such as compound forms like 11. (1), 11. (2), or simple forms like 7, 8, 9. Always preserve the original numbering exactly as it appears in the document..
+  - ocr_text: complete question (including the question number present) and answer content, including <diagram_1> if any diagram exists.
+  - diagrams: 
+     - If diagram exists → write: id: 'diagram_1', coordinates: 'n/a', and appropriate diagram_class ('graph' or 'diagram').
+     - If no diagram → set: id: 'n/a', coordinates: 'n/a', diagram_class: 'n/a'.
+  - pages: The page number of the content ,Must always be shown as a list of integers in square brackets.
+
+- Understand the context to group full question-answer blocks together.
+- Maintain the output structure and avoid inserting extra commentary or descriptions.
+- Any text that is struck through (strikethrough formatting) must be completely ignored and excluded from the output.
 """
 
 # === Resize Image Function ===
@@ -93,13 +100,13 @@ if 'current_page' not in st.session_state:
 
 @st.cache_data
 def load_images(folder_path, num_pages):
-    return [os.path.join(folder_path, f"page_{i+1}.png") for i in range(num_pages)]
+    return [os.path.join(folder_path, f"page_{i+1}.jpeg") for i in range(num_pages)]
 
 @st.cache_data(show_spinner=False)
 def load_base64_images(folder_path, num_pages):
     b64_list = []
     for i in range(num_pages):
-        path = os.path.join(folder_path, f"page_{i+1}.png")
+        path = os.path.join(folder_path, f"page_{i+1}.jpeg")
         with open(path, "rb") as f:
             b64_list.append(base64.b64encode(f.read()).decode())
     return b64_list
@@ -108,7 +115,7 @@ def load_base64_images(folder_path, num_pages):
 if uploaded_file:
     pdf_name = uploaded_file.name.replace(".pdf", "")
     folder_name = f"{pdf_name}-{model_name}"
-    folder_path = os.path.join("uploads", folder_name)
+    folder_path = os.path.join("Gemini_ocr_output", folder_name)
     os.makedirs(folder_path, exist_ok=True)
 
     pdf_path = os.path.join(folder_path, uploaded_file.name)
@@ -120,7 +127,7 @@ if uploaded_file:
     for page_num in range(len(doc)):
         page = doc.load_page(page_num)
         pix = page.get_pixmap(dpi=300)
-        img_path = os.path.join(folder_path, f"page_{page_num+1}.png")
+        img_path = os.path.join(folder_path, f"page_{page_num+1}.jpeg")
         pix.save(img_path)
 
         # Resize the image before saving
@@ -201,7 +208,7 @@ with col1:
             # Now render the image for the (possibly) updated page
             b64 = images_b64[st.session_state.current_page]
             img_html = f"""
-            <img src="data:image/png;base64,{b64}"
+            <img src="data:image/jpeg;base64,{b64}"
                  style="height:{BOX_HEIGHT}px; width:100%; object-fit:contain;" />
             """
             components.html(img_html, height=BOX_HEIGHT)

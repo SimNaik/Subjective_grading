@@ -1,3 +1,4 @@
+#here i am using one model and resized the image to 7689 also 
 import streamlit as st
 import os
 import fitz  # PyMuPDF
@@ -42,8 +43,11 @@ pages: [2]
 ]
 """
 
+# === Set the dimension value ===
+dim = 768  # Define the dimension value
+
 # === Resize Image Function ===
-def resize_image(image, dim=768, save_path=None):
+def resize_image(image, dim=dim, save_path=None):
     image1 = np.array(image.convert('RGB'))  # Ensure the image is in RGB mode
     original_size = image1.shape  # (height, width, channels)
     image1 = image1.mean(axis=2)  # Convert image to grayscale
@@ -76,22 +80,44 @@ if 'current_page' not in st.session_state:
 def load_images(folder_path, num_pages):
     return [os.path.join(folder_path, f"page_{i+1}.jpeg") for i in range(num_pages)]
 
+# === load_base64_images function ===
 @st.cache_data(show_spinner=False)
 def load_base64_images(folder_path, num_pages):
     b64_list = []
     for i in range(num_pages):
-        path = os.path.join(folder_path, f"page_{i+1}.jpeg")
+        # Correct naming conventions for both types of images
+        img_filename_dim = f"DIM_{dim}_PAGE_{i + 1}.jpeg"  # Use dim variable here
+        img_filename_default = f"page_{i + 1}.jpeg"  # Old naming convention
+
+        # Check for both image filenames
+        img_path_dim = os.path.join(folder_path, img_filename_dim)
+        img_path_default = os.path.join(folder_path, img_filename_default)
+
+        # Check for existence of either file
+        if os.path.exists(img_path_dim):
+            path = img_path_dim
+        elif os.path.exists(img_path_default):
+            path = img_path_default
+        else:
+            st.warning(f"❌ Image {img_filename_dim} or {img_filename_default} not found in {folder_path}")
+            continue  # Skip to next page if neither image is found
+
+        # Load the base64-encoded image
         with open(path, "rb") as f:
             b64_list.append(base64.b64encode(f.read()).decode())
+    
     return b64_list
+
 
 # === Handle upload & convert to images ===
 if uploaded_file:
+    # Get the PDF file name and set the folder path
     pdf_name = uploaded_file.name.replace(".pdf", "")
     folder_name = f"{pdf_name}-{model_name}"
     folder_path = os.path.join("Gemini_ocr_output", folder_name)
     os.makedirs(folder_path, exist_ok=True)
 
+    # Save the uploaded PDF file to the folder
     pdf_path = os.path.join(folder_path, uploaded_file.name)
     with open(pdf_path, "wb") as f:
         f.write(uploaded_file.read())
@@ -101,17 +127,27 @@ if uploaded_file:
 
     resized_images = []  # List to store resized image objects
 
-    # Save images directly in the main folder and resize them
+    # Save images directly in the same folder and resize them
     for page_num in range(len(doc)):
         page = doc.load_page(page_num)
         pix = page.get_pixmap(dpi=300)
 
-        # Save the images directly inside the main folder (no model subfolders for images)
-        img_path = os.path.join(folder_path, f"page_{page_num + 1}.jpeg")
-        pix.save(img_path)  # Save image for both models (no need for model subfolders)
+        # Naming conventions
+        img_filename_dim = f"DIM_{dim}_PAGE_{page_num + 1}.jpeg"
+        img_filename_default = f"page_{page_num + 1}.jpeg"
 
-        # Open the image and resize it
-        original_size, new_size, resized_image = resize_image(Image.open(img_path), dim=768)
+        # Paths for both images
+        img_path_dim = os.path.join(folder_path, img_filename_dim)
+        img_path_default = os.path.join(folder_path, img_filename_default)
+
+        # Save the original image with the default name
+        pix.save(img_path_default)
+
+        # Now that the original image is saved, open it and resize it
+        original_size, new_size, resized_image = resize_image(Image.open(img_path_default), dim=dim)
+
+        # Save the resized image
+        resized_image.save(img_path_dim)
 
         # Display the resize information in Streamlit
         st.write(f"**Original Image Size (Page {page_num + 1}):** {original_size[0]}x{original_size[1]}")
@@ -119,16 +155,18 @@ if uploaded_file:
 
         resized_images.append(resized_image)  # Add resized image to list
 
-    images = load_images(folder_path, len(doc))
+    # Update load_base64_images to use the correct naming convention
     images_b64 = load_base64_images(folder_path, len(doc))
 else:
     images_b64 = []
+
 
 # === Batch send to Gemini ===
 results = []
 if uploaded_file:
     st.info("🤖 Sending images to Gemini …")
-    json_path = os.path.join(folder_path, "output.json") if folder_path else ""
+    output_json_filename = f"{pdf_name}-{model_name}_output.json"
+    json_path = os.path.join(folder_path, output_json_filename)
     
     # Start time tracking for total OCR process
     start_time = time.time()
@@ -194,7 +232,7 @@ with col1:
                     st.session_state.current_page += 1
 
             # Set the path to the resized image for the current page
-            resized_img_path_1 = os.path.join(folder_path, f"page_{st.session_state.current_page + 1}.jpeg")
+            resized_img_path_1 = os.path.join(folder_path, f"DIM_{dim}_PAGE_{st.session_state.current_page + 1}.jpeg")
 
             # Display the resized image directly from the file path
             if os.path.exists(resized_img_path_1):
@@ -203,7 +241,6 @@ with col1:
                 st.warning(f"❌ Resized image for page {st.session_state.current_page + 1} not found.")
         else:
             st.warning("❌ No images available")
-
 
 # ---------- Column 2 (JSON Output) ----------
 with col2:

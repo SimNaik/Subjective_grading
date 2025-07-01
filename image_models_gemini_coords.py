@@ -6,7 +6,7 @@ from io import BytesIO
 import os
 
 # Set your API key here
-api_key = "AIzaSyAO0XQdLaNbd9xtHSIqP4oUhwB3uteh14Q"
+api_key = ""
 
 # Create a GenAI client with the API key
 client = genai.Client(api_key=api_key)

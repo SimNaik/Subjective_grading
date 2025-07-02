@@ -41,3 +41,55 @@ coords = [
 ]
 
 draw_bounding_boxes(image_path, coords)
+
+
+
+
+
+
+
+
+#send the whole json and the bounding bxoes are plotted on a page
+import os
+import json
+from PIL import Image, ImageDraw
+import matplotlib.pyplot as plt
+import numpy as np
+
+def draw_bounding_boxes(image_path, json_file_path):
+    # Open image using PIL
+    image = Image.open(image_path)
+    
+    # Create drawing context
+    draw = ImageDraw.Draw(image)
+
+    # Load bounding box data from JSON
+    with open(json_file_path, "r") as f:
+        data = json.load(f)
+    
+    # Normalize coordinates and draw bounding boxes
+    colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF']
+
+    for index, item in enumerate(data):
+        box = item['box_2d']
+        ymin, xmin, ymax, xmax = [coord / 1000 for coord in box]  # Normalize to 0-1 range
+        width = (xmax - xmin) * image.width
+        height = (ymax - ymin) * image.height
+
+        # Draw the bounding box with a specific color
+        color = colors[index % len(colors)]
+        draw.rectangle([xmin * image.width, ymin * image.height, 
+                        xmin * image.width + width, ymin * image.height + height], 
+                       outline=color, width=2)
+
+    # Show image with bounding boxes using matplotlib
+    plt.figure(figsize=(10, 10))
+    plt.imshow(np.asarray(image))
+    plt.axis('off')  # Hide axis
+    plt.show()
+
+# Example input
+image_path = '/mnt/shared-storage/yolov11L_Image_training_set_400/Solution_Grading/check/page_1.jpeg'  # Replace with your image path
+json_file_path = '/mnt/shared-storage/yolov11L_Image_training_set_400/Solution_Grading/check/outpukt.json'  # Replace with your JSON file path
+
+draw_bounding_boxes(image_path, json_file_path)

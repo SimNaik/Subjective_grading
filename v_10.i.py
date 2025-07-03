@@ -1,4 +1,4 @@
-#this is a one model py file no streamlite where image is resized sent in batches to pro using prompt3
+#this is a one model py file no streamlite where image is resized sent in batches to pro using prompt3- pdf is sent
 import os
 import fitz  # PyMuPDF for PDF processing
 from PIL import Image

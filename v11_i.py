@@ -1,5 +1,7 @@
 #this is basically to detect the line which is wrong
 #this sends image which will beresized and output is json no streamlit no pdf
+#this is to send a specific sentence to the model
+
 import os
 from PIL import Image
 import json
@@ -19,7 +21,7 @@ model = genai.GenerativeModel(model_name)
 # === Prompt for Gemini ===
 PROMPT = """
 Given an image:
-Sentence Extraction: Extract a specific sentence from the image -  "Tangents drawn from the same".
+Sentence Extraction: Extract a specific sentence from the image -  "Left atrium receives the oxygenated blood from the rings.".
 Bounding Box Coordinates: For the sentence extracted, return the OCR-detected text along with the coordinates of the bounding box in the format [ymin, xmin, ymax, xmax] where:
 ymin is the top vertical coordinate of the bounding box.
 xmin is the left horizontal coordinate of the bounding box.
@@ -137,7 +139,7 @@ def main(image_file_path, output_folder):
     results = send_to_gemini([resized_image])
 
     if results:
-        output_json_filename = f"output.json"
+        output_json_filename = f"768_output.json"
         json_path = os.path.join(output_folder, output_json_filename)
 
         # Save the OCR results
@@ -149,6 +151,6 @@ def main(image_file_path, output_folder):
         print("❌ No results from Gemini OCR")
 
 
-image_file_path = "/mnt/shared-storage/yolov11L_Image_training_set_400/Solution_Grading/check_4_i/page_5.jpeg"  # Replace with your image file path
-output_folder = "/mnt/shared-storage/yolov11L_Image_training_set_400/Solution_Grading/check_4_i"  # Replace with your output folder path
+image_file_path = "/mnt/shared-storage/yolov11L_Image_training_set_400/Solution_Grading/check_4_i2/B01_page_1.jpeg"  # Replace with your image file path
+output_folder = "/mnt/shared-storage/yolov11L_Image_training_set_400/Solution_Grading/check_4_i2"  # Replace with your output folder path
 main(image_file_path, output_folder)

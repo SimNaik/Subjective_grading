@@ -1,0 +1,164 @@
+# Version 1: Original prompt with basic header/footer filtering
+# - Header/footer exclusion mentioned in the detailed rules section at the bottom
+# - Uses generic terminology "template, header, footer, or decorative elements"
+v1 = """Carefully extract all text content from the PDF, maintaining the exact order and formatting as it appears.
+Preserve all mathematical equations, formulas, and special characters exactly as they appear in the PDF.
+Do not add any headers, descriptions, or labels to the output.
+
+Output only the extracted text content in the following format for an example:
+
+[
+{
+question_number: 1,
+ocr_text: 'This is the PV curve <diagram_1>',
+diagrams: [
+  {
+    id: 'diagram_1',
+    coordinates: 'n/a',
+    diagram_class: 'graph or diagram'
+  }
+],
+pages: [2]
+}
+]
+
+Important Rules:
+- The output must be a list of such question-answer objects.
+- Each object must contain:
+  - question_number in increasing order which is the question number of the content,Question numbers may appear in various formats—such as compound forms like 11. (1), 11. (2), or simple forms like 7, 8, 9. Always preserve the original numbering exactly as it appears in the document..
+  - ocr_text: complete question (including the question number present) and answer content, including <diagram_1> if any diagram exists.
+  - diagrams: 
+     - If diagram exists → write: id: 'diagram_1', coordinates: 'n/a', and appropriate diagram_class ('graph' or 'diagram').
+     - If no diagram → set: id: 'n/a', coordinates: 'n/a', diagram_class: 'n/a'.
+  - pages: The page number of the content ,Must always be shown as a list of integers in square brackets.
+
+- Understand the context to group full question-answer blocks together.
+- Maintain the output structure and avoid inserting extra commentary or descriptions.
+- Any text that is struck through (strikethrough formatting) must be completely ignored and excluded from the output.
+- Ignore any template, header, footer, or decorative elements such as 'Date', 'Page', and similar non-content areas that do not contribute to the main educational material
+"""
+
+
+# Version 2: Refined wording for header filtering  
+# - Moves header/footer exclusion to a more prominent position in rules
+# - Adds more specific language "header or headings of the page"
+# - Improves clarity around what page elements to ignore
+v2 = """
+
+Carefully extract all text content from the PDF, maintaining the exact order and formatting as it appears.
+Preserve all mathematical equations, formulas, and special characters exactly as they appear in the PDF.
+Do not add any headers, descriptions, or labels to the output.
+
+Output only the extracted text content in the following format for an example:
+
+[
+{
+question_number: 1,
+ocr_text: 'This is the PV curve <diagram_1>',
+diagrams: [
+  {
+    id: 'diagram_1',
+    coordinates: 'n/a',
+    diagram_class: 'graph or diagram'
+  }
+],
+pages: [2]
+}
+]
+
+Important Rules:
+- The output must be a list of such question-answer objects.
+- Each object must contain:
+  - question_number in increasing order which is the question number of the content,Question numbers may appear in various formats—such as compound forms like 11. (1), 11. (2), or simple forms like 7, 8, 9. Always preserve the original numbering exactly as it appears in the document..
+  - ocr_text: complete question (including the question number present) and answer content, including <diagram_1> if any diagram exists.
+  - diagrams: 
+     - If diagram exists → write: id: 'diagram_1', coordinates: 'n/a', and appropriate diagram_class ('graph' or 'diagram').
+     - If no diagram → set: id: 'n/a', coordinates: 'n/a', diagram_class: 'n/a'.
+  - pages: The page number of the content ,Must always be shown as a list of integers in square brackets.
+
+- Understand the context to group full question-answer blocks together.
+- Maintain the output structure and avoid inserting extra commentary or descriptions.
+- Any text that is struck through (strikethrough formatting) must be completely ignored and excluded from the output.
+- Ignore any template, header or headings of the page, footer, or decorative elements such as 'Date', 'Page'.
+"""
+
+
+# Version 3: Emphasis on filtering with upfront placement
+# - Places header/footer exclusion instruction at the very beginning (in parentheses)
+v3 = """
+
+Carefully extract all text content from the PDF (Ignore any template, header or headings of the page, footer, or decorative elements such as 'Date', 'Page'.), maintaining the exact order and formatting as it appears.
+Preserve all mathematical equations, formulas, and special characters exactly as they appear in the PDF.
+Do not add any headers, descriptions, or labels to the output.
+
+Output only the extracted text content in the following format for an example:
+
+[
+{
+question_number: 1,
+ocr_text: 'This is the PV curve <diagram_1>',
+diagrams: [
+  {
+    id: 'diagram_1',
+    coordinates: 'n/a',
+    diagram_class: 'graph or diagram'
+  }
+],
+pages: [2]
+}
+]
+
+Important Rules:
+- The output must be a list of such question-answer objects.
+- Each object must contain:
+  - question_number in increasing order which is the question number of the content,Question numbers may appear in various formats—such as compound forms like 11. (1), 11. (2), or simple forms like 7, 8, 9. Always preserve the original numbering exactly as it appears in the document..
+  - ocr_text: answer content, including <diagram_1> if any diagram exists.
+  - diagrams: 
+     - If diagram exists → write: id: 'diagram_1', coordinates: 'n/a', and appropriate diagram_class ('graph' or 'diagram').
+     - If no diagram → set: id: 'n/a', coordinates: 'n/a', diagram_class: 'n/a'.
+  - pages: The page number of the content ,Must always be shown as a list of integers in square brackets.
+
+- Understand the context to group full question-answer blocks together.
+- Maintain the output structure and avoid inserting extra commentary or descriptions.
+- Any text that is struck through (strikethrough formatting) must be completely ignored and excluded from the output.
+"""
+
+
+ V4 PROMPT
+ THIS IS FOR COORDS AND TEXT FROM GEMINI PRO
+ Given a PDF document, for each page:
+Carefully extract all text content from the PDF (Ignore any template, header or headings of the page, footer, or decorative elements such as 'Date', 'Page'.), maintaining the exact order and formatting as it appears.
+For each text block detected, return a JSON array with:
+The page number (page_number).
+The OCR text (text).
+The bounding box coordinates in the format [ymin, xmin, ymax, xmax], where:
+ymin is the top vertical coordinate of the text box,
+xmin is the left horizontal coordinate of the text box,
+ymax is the bottom vertical coordinate of the text box,
+xmax is the right horizontal coordinate of the text box.
+If there is no text detected on a page, return an empty list for that page. Please provide the data for each page in the following JSON format
+Example JSON Output (for one page):
+
+[
+  {
+    "page_number": 1,
+    "text": "Introduction to AI",
+    "bbox": [50, 100, 150, 300]
+  },
+  {
+    "page_number": 1,
+    "text": "This document discusses the basics of AI.",
+    "bbox": [160, 110, 210, 350]
+  },
+  {
+    "page_number": 2,
+    "text": "Conclusion and future work",
+    "bbox": [80, 50, 130, 250]
+  }
+]
+Notes for the OCR and PDF Processing:
+Page Numbering: Each page's results should be nested under the page_number field to indicate which page the text belongs to.
+Bounding Box Format: Each detected text's bounding box will be represented as [ymin, xmin, ymax, xmax].
+OCR Text: Include the actual OCR-detected text for each bounding box.
+Empty Pages: If a page contains no text, return an empty list for that page (e.g., "page_number": 3, "text": []).
+"""

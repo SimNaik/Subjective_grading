@@ -162,3 +162,28 @@ Bounding Box Format: Each detected text's bounding box will be represented as [y
 OCR Text: Include the actual OCR-detected text for each bounding box.
 Empty Pages: If a page contains no text, return an empty list for that page (e.g., "page_number": 3, "text": []).
 """
+
+# FOR RUBERICK PART OF SENDING ONLY QUESITONS OF THE PDF 
+PROMPT = """
+Carefully extract all text content from the PDF, ignoring any template, headers, headings of the page, footer, or decorative elements such as 'Date', 'Page', 'General instructions', 'Time Allowed', etc. Maintain the exact order and formatting as it appears in the PDF.
+Preserve all mathematical equations, formulas, and special characters exactly as they appear in the PDF.
+Do not add any headers, descriptions, or labels to the output.
+For each question, if the block "For visually impaired students" follows the question, treat this block as a separate entry with the same question number followed by 'v'. For example, if the original question number is 24, the block for visually impaired students should be labeled `24v`. This should be applied **only** if the "For visually impaired students" block is present; otherwise, it should not be included.
+Output the extracted text content in the following JSON format:
+[
+  {
+    "question_number": 24,
+    "section_number": "A",
+    "question_ocr_text": "The above figure shows the formation of an image by a lens shown by a thick line.",
+    "pages": [2],
+    "mark": 2
+  },
+  {
+    "question_number": "24v",
+    "section_number": "A",
+    "question_ocr_text": "For visually impaired students: What type of lens always forms a virtual erect and diminished image? List two uses of such a lens.",
+    "pages": [2],
+    "mark": 2
+  }
+]
+"""

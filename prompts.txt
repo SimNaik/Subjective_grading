@@ -174,16 +174,22 @@ Output the extracted text content in the following JSON format:
   {
     "question_number": 24,
     "section_number": "A",
-    "question_ocr_text": "The above figure shows the formation of an image by a lens shown by a thick line.",
-    "pages": [2],
+    "question_ocr_text": "The above figure shows the formation of an image by a lens shown by a thick line.<Image_1>",
     "mark": 2
+    "pages": [2],
   },
   {
-    "question_number": "24v",
+    "question_number": 24_v,
     "section_number": "A",
-    "question_ocr_text": "For visually impaired students: What type of lens always forms a virtual erect and diminished image? List two uses of such a lens.",
-    "pages": [2],
+    "question_ocr_text": "For visually impaired students:<Image_2> What type of lens always forms a virtual erect and diminished image? List two uses of such a lens.",
     "mark": 2
+    "pages": [2],
   }
 ]
+The JSON format is now clearly defined:
+question_number: The unique identifier for each question.
+section_number: The section in which the question belongs (e.g., "A", "B").
+question_ocr_text: The extracted question text, along with any diagrams/Images or special content .
+mark: The mark or score for the question (this was incomplete in your original prompt, so now it's included).
+Pages : Page number of the question content
 """

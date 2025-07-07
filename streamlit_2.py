@@ -51,9 +51,10 @@ def draw_bounding_boxes(image, coords):
     highlight_color = (190, 195, 0, 64)  # RGBA: Red, Green, Blue, Alpha (opacity: 0-255)
     
     for index, box in enumerate(coords):
-        ymin, xmin, ymax, xmax = [coord / 1000 for coord in box]  # Normalize to 0-1 range
-
-        # Calculate absolute pixel coordinates
+        # Normalize the bounding box coordinates to 0-1 range
+        ymin, xmin, ymax, xmax = [coord / dimension for coord, dimension in zip(box, [image.height, image.width, image.height, image.width])]
+        
+        # Calculate absolute pixel coordinates from normalized values
         left = xmin * image.width
         top = ymin * image.height
         right = xmax * image.width

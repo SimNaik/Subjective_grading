@@ -48,7 +48,7 @@ def draw_bounding_boxes(image, coords):
     draw = ImageDraw.Draw(image)
 
     # Define a translucent highlight color (e.g., yellow with ~12% opacity)
-    highlight_color = (190, 195, 0, 174)  # RGBA: Red, Green, Blue, Alpha (opacity: 0-255)
+    highlight_color = (190, 195, 0, 114)  # RGBA: Red, Green, Blue, Alpha (opacity: 0-255)
     
     for box in coords:
         # Ensure that the bounding box is in the form of [ymin, xmin, ymax, xmax]

@@ -124,7 +124,7 @@ def main():
 
         # Text input for user prompt
         user_input = st.text_area("Enter your prompt:", 
-                                  """Return bounding boxes as JSON arrays on the line "" [ymin, xmin, ymax, xmax]""")
+                                  """Return bounding boxes as JSON arrays on the line "" as [ymin, xmin, ymax, xmax]""")
         
         # Enter button to send data to Gemini
         if st.button('Send to Gemini'):

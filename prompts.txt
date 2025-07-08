@@ -200,7 +200,9 @@ You are an AI assistant tasked with extracting structured educational questions 
 You are given:
 A Question Paper PDF (e.g. Science-SQP)
 A Marking Scheme PDF (e.g. Science-MS)
-Each main question may have multiple sub-questions and corresponding answers. Your job is to extract both the question and its marking scheme into one JSON file, in the exact structure below. Only create subquestion blocks (like question_id_22_A, question_id_22_i,question_id_22_) if they actually exist in the question structure. If the question and its solution  is standalone without labeled subparts, write it directly under question_id without duplicating it inside subquestions.
+Each main question may have multiple sub-questions and corresponding answers. Your task is to extract both the question and its marking scheme into one JSON file, in the exact structure below. Only create subquestion blocks (like question_id_22_A, question_id_22_i,question_id_22_) if they actually exist in the question structure. If the question and its solution  is standalone without labeled subparts, write it directly under question_id without duplicating it inside subquestions.
+
+Follow the example below:
 [
 {
         "question_id_35": "Identify 'p', 'q' and 'r' in the following balanced reaction\nHeat\np Pb (NO3)2(s) ------> q PbO(s) + r NO2(g) + O2(g)\nΑ. 2,2,4\nB. 2,4,2\nC. 2,4,4\nD. 4,2,2",
@@ -247,8 +249,6 @@ Each main question may have multiple sub-questions and corresponding answers. Yo
       ]
     }
   }
-]
-AND FOLLOW THIS FORMAT 
   {
     "question_id": "39",
     "question_ocr": "<image_1> Full main question text from SQP, including intro/instruction if any.",

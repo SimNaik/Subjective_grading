@@ -1,4 +1,4 @@
-# Version 1: Original prompt with basic header/footer filtering
+# V 1: Original prompt with basic header/footer filtering
 # - Header/footer exclusion mentioned in the detailed rules section at the bottom
 # - Uses generic terminology "template, header, footer, or decorative elements"
 v1 = """Carefully extract all text content from the PDF, maintaining the exact order and formatting as it appears.
@@ -37,7 +37,7 @@ Important Rules:
 - Any text that is struck through (strikethrough formatting) must be completely ignored and excluded from the output.
 - Ignore any template, header, footer, or decorative elements such as 'Date', 'Page', and similar non-content areas that do not contribute to the main educational material
 """
-
+----------------------------------------------------------------------------------------------------------------------------------------------------
 
 # Version 2: Refined wording for header filtering  
 # - Moves header/footer exclusion to a more prominent position in rules
@@ -82,7 +82,7 @@ Important Rules:
 - Ignore any template, header or headings of the page, footer, or decorative elements such as 'Date', 'Page'.
 """
 
-
+----------------------------------------------------------------------------------------------------------------------------------------------------
 # Version 3: Emphasis on filtering with upfront placement
 # - Places header/footer exclusion instruction at the very beginning (in parentheses)
 v3 = """
@@ -123,7 +123,7 @@ Important Rules:
 - Any text that is struck through (strikethrough formatting) must be completely ignored and excluded from the output.
 """
 
-
+----------------------------------------------------------------------------------------------------------------------------------------------------
  V4 PROMPT
  THIS IS FOR COORDS AND TEXT FROM GEMINI PRO
  Given a PDF document, for each page:

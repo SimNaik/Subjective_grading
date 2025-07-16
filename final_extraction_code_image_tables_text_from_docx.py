@@ -4,17 +4,21 @@ import zipfile
 import os
 import re
 from PIL import Image  # For image format verification
-
-# Function to remove content between < and >
-def clean_text(text):
-    # This regex will remove anything between < and >, including the brackets themselves
-    return re.sub(r'<.*?>', '', text)
-
 # Helper to get all block items (paragraphs and tables) in order
 from docx.oxml.table import CT_Tbl
 from docx.oxml.text.paragraph import CT_P
 from docx.table import Table
 from docx.text.paragraph import Paragraph
+
+def clean_text(text):
+    # Remove <sub_id = number> with optional spaces, line breaks, and extra spaces around the equal sign
+    text = re.sub(r'<sub_id\s*=\s*\d+\s*>\s*', '', text)  # Match <sub_id = number> with spaces and line breaks
+
+    # Remove <sub_id end> with optional spaces or line breaks around it
+    text = re.sub(r'<sub_id\s*end\s*>\s*', '', text)  # Match <sub_id end> with spaces or line breaks
+
+    return text
+
 
 # Function to extract images from DOCX
 def extract_images_from_docx(docx_file_path, output_image_dir):
@@ -95,7 +99,7 @@ def process_directory(input_dir, output_dir):
         for block in iter_block_items(doc):
             if isinstance(block, Paragraph):
                 text = block.text
-                cleaned_text = clean_text(text)
+                cleaned_text = clean_text(text)  # Clean the text using the updated clean_text function
 
                 # Find start of section based on ID tag
                 if '<sol_start id=' in text and not found_start:
@@ -117,38 +121,39 @@ def process_directory(input_dir, output_dir):
                     found_start = False
                     continue
 
-                # Add content inside section
+                # Add content inside section and remove <sub_id = number> and <sub_id end>
                 if inside_sol:
-                    image_added = False
-                    text_before_image = ""
-
-                    for run in block.runs:
-                        # Check if there's an image in this run
-                        if run._r.xml.find('graphic') != -1:
-                            if image_index < len(extracted_images):
-                                # First add any text before the image
-                                if text_before_image:
-                                    new_doc.add_paragraph(text_before_image)
-                                # Add the image to the document
-                                add_image_to_doc(extracted_images[image_index], new_doc)
-                                image_index += 1
-                            image_added = True
-                            text_before_image = ""  # Reset the text before the image after adding the image
-                        else:
-                            # Accumulate the text before the image
-                            text_before_image += run.text
-
-                    # If there's remaining text before the image (but no image in this paragraph)
-                    if text_before_image:
-                        new_doc.add_paragraph(text_before_image)
+                    # Clean the text inside the section
+                    cleaned_text = re.sub(r'<sub_id\s*=\s*\d+\s*>\s*', '', cleaned_text)  # Remove <sub_id = number>
+                    cleaned_text = re.sub(r'<sub_id\s*end\s*>\s*', '', cleaned_text)  # Remove <sub_id end>
+                    
+                    # Add the cleaned text to the new document
+                    new_doc.add_paragraph(cleaned_text)  # Ensure cleaned text is added here
 
             elif isinstance(block, Table) and inside_sol:
                 copy_table(block, new_doc)
 
 
+# Function to extract and clean questions from docx
+def extract_and_clean_questions(doc):
+    question_text = []
+
+    for para in doc.paragraphs:
+        # Only keep the text between <sol_start> and <sol_end> tags (without the tags themselves)
+        match = re.search(r'<sol_start.*?>\s*(.*?)\s*<sol_end>', para.text)
+        if match:
+            question_text_section = match.group(1)
+            # Remove content between <sub_id = ...> and <sub_id end> tags but keep the text inside them
+            question_text_cleaned = re.sub(r'<sub_id.*?>', '', question_text_section)  # Remove <sub_id ...>
+            question_text_cleaned = re.sub(r'<sub_id end>', '', question_text_cleaned)  # Remove <sub_id end>
+            question_text.append(question_text_cleaned.strip())  # Extract and clean question text
+    
+    return question_text
+
+
 # Paths
 input_dir = '/Users/simrannaik/Desktop/solution_improvement/ds-prototypes/subjective_grading/solution_improvement/OCR_gd_gem/Converting Handwriting PDF to Word File/Biology Word file'
-output_dir = '/Users/simrannaik/Desktop/solution_improvement/ds-prototypes/subjective_grading/solution_improvement/OCR_gd_gem/final_evaluation/human_ocr'
+output_dir = '/Users/simrannaik/Desktop/solution_improvement/ds-prototypes/subjective_grading/solution_improvement/OCR_gd_gem/hujmanss_ocr'
 
 # Process the directory containing DOCX files
 process_directory(input_dir, output_dir)

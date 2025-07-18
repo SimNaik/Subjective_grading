@@ -412,4 +412,15 @@ Any portion of text that has a line through it (strikethrough) MUST BE COMPLETEL
 ]
 
 
+**Schema Definitions:**
+- `question_number` (integer): The main question number.
+- `ocr_text` (string): The full, collated text for the question and all its sub-parts.
+- `diagrams` (array): A list of diagram objects. Leave as an empty array `[]` if none.
+  - `id` (string): The diagram identifier from the text.
+  - `coordinates` (string): "x_mid,y_mid,width,height", with values normalized between 0 and 1 relative to image dimensions.
+  - `page_number` (integer): The page where the diagram is located.
+  - diagram_class: mention is it a diagram or a graph .
+- `pages` (array): A list of all page numbers on which any part of the question appears.
+
+
 

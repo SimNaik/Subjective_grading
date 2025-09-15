@@ -1,0 +1,10 @@
+boto3
+gunicorn
+botocore
+Flask
+flask_restful
+#numpy>=1.21.2
+#Pillow>=9.5.0
+torch==1.13.1
+torchvision==0.14.1
+craft-text-detector==0.4.3

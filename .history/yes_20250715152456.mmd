@@ -1,0 +1,143 @@
+<sol_start id=8>
+
+Light Reaction
+
+Dark Reaction
+
+(i)
+
+It takes place in the grana part of the chloroplast.
+
+(i)
+
+It takes place in the stroma part of the chloroplast.
+
+(ii)
+
+It is a photochemical phase.
+
+(ii)
+
+It is a biochemical phase.
+
+(iii)
+
+The end products are ATP and NADPH.
+
+(iii)
+
+The end product is glucose.
+
+8.
+![alt text](image1.png)
+
+<image1.png>
+
+<sol_end>import os
+import zipfile
+from docx import Document
+from docx.shared import Inches
+
+def create_folder_if_not_exists(folder_path):
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+def extract_images_from_docx(docx_path, output_folder):
+    """Extract images from DOCX and save them in the output folder."""
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    # Open the DOCX file as a ZIP archive
+    with zipfile.ZipFile(docx_path, 'r') as docx_zip:
+        # Iterate through the files in the DOCX archive
+        for file in docx_zip.namelist():
+            if file.startswith("word/media/"):
+                # Extract the image files from the "word/media/" directory in DOCX
+                img_name = os.path.basename(file)
+                docx_zip.extract(file, output_folder)
+                os.rename(os.path.join(output_folder, file), os.path.join(output_folder, img_name))
+                print(f"Image extracted: {img_name}")
+
+    print(f"Images extracted to {output_folder}")
+
+def process_sol_start_end_with_images(doc, image_folder, new_doc, sol10_folder):
+    """Detect images and insert them into the document."""
+    image_references = []  # List to store image references and their paths
+
+    for para in doc.paragraphs:
+        print(f"Processing Paragraph: '{repr(para.text)}'")  # Debugging to check content
+        
+        # Check if the paragraph contains an image (image is represented by a <a:blip> tag in XML)
+        if 'word/media/' in para._element.xml:  # Detect if the paragraph contains an image
+            img_name = para._element.xpath(".//a:blip/@r:embed")[0]  # Get the image name (relationship ID)
+            img_file = os.path.join(image_folder, img_name)  # Get the image file path
+            image_references.append(img_file)  # Store the image path
+
+            # Insert the image in the new document
+            new_doc.add_paragraph(f"[IMAGE: {img_file}]")  # Placeholder for the image
+            new_doc.add_picture(img_file, width=Inches(4))  # Add image directly into the doc
+
+    return new_doc, image_references
+
+def extract_sol_id_10_section_with_images(docx_file_path, output_folder, image_folder):
+    """Process the DOCX to insert image placeholders and save the document."""
+    # Extract images from the original DOCX file
+    extract_images_from_docx(docx_file_path, image_folder)
+
+    # Load the document
+    doc = Document(docx_file_path)
+
+    # Create output folder for the sol10 section
+    file_name = os.path.splitext(os.path.basename(docx_file_path))[0]
+    sol10_folder = os.path.join(output_folder, f"{file_name}_sol10")
+    create_folder_if_not_exists(sol10_folder)
+
+    # New document to save the extracted section
+    new_doc = Document()
+
+    in_sol10 = False
+    for para in doc.paragraphs:
+        if "<sol_start id=10>" in para.text:  # Detect <sol_start id=10>
+            in_sol10 = True
+            new_doc.add_paragraph("<sol_start id=10>")
+            continue
+        if "<sol_end>" in para.text and in_sol10:  # Detect <sol_end>
+            new_doc.add_paragraph("<sol_end>")
+            in_sol10 = False
+            break  # Stop after processing
+
+        # If inside the <sol_start> and <sol_end> range, add paragraph content
+        if in_sol10:
+            # Add paragraph text
+            new_doc.add_paragraph(para.text)  # Insert paragraph text
+
+            # Check for images within paragraphs
+            if 'word/media/' in para._element.xml:
+                # Extract image and save to new doc
+                try:
+                    # Extract image from paragraph and save it
+                    for run in para.runs:
+                        if 'graphic' in run._r.xml:  # Check if image is in this run
+                            embed_id = run._r.xpath(".//a:blip/@r:embed")[0]
+                            rId = run.part.related_parts[embed_id]
+                            image_data = rId.blob
+                            image_path = os.path.join(sol10_folder, "image_from_sol10.png")
+                            with open(image_path, "wb") as img_file:
+                                img_file.write(image_data)
+                            new_doc.add_paragraph("[IMAGE INSERTED BELOW]")
+                            new_doc.add_picture(image_path, width=Inches(4))
+                            break
+                except Exception as e:
+                    new_doc.add_paragraph(f"[Failed to extract image: {e}]")
+
+    # Save the new DOCX file
+    output_docx = os.path.join(sol10_folder, "section_sol10_with_images.docx")
+    new_doc.save(output_docx)
+    print(f"Extracted content between <sol_start id=10> and <sol_end> saved to:\n{output_docx}")
+
+# Example usage
+docx_file_path = "/Users/simrannaik/Desktop/solution_improvement/ds-prototypes/subjective_grading/solution_improvement/check_image/updated_with_placeholders.docx"
+output_folder = "/Users/simrannaik/Desktop/solution_improvement/ds-prototypes/subjective_grading/solution_improvement/check_image"
+image_folder = "/Users/simrannaik/Desktop/solution_improvement/ds-prototypes/subjective_grading/solution_improvement/check_image/images"
+
+extract_sol_id_10_section_with_images(docx_file_path, output_folder, image_folder)

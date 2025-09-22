@@ -126,7 +126,7 @@ class OCRHandler:
                 question_number = row['Question_no']
                 question_list.append(f"Question {question_number}")
                 
-                if 'image.png' in str(question_content):
+                if '.png' in str(question_content):
                     # Handle questions with images
                     if visualize_and_save_question is not None and resize_image is not None:
                         try:

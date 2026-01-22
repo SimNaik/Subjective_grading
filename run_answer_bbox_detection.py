@@ -29,8 +29,7 @@ from ocr.answer_bbox_detector import (
     process_question_solution_with_pdf, 
     process_all_question_solutions,
     find_all_question_solutions,
-    find_page_image,
-    extract_answer_number_from_solution
+    find_page_image
 )
 
 def test_single_question():
@@ -147,16 +146,14 @@ def analyze_solutions():
             
             if pages:
                 total_with_pages += 1
-                answer_num = extract_answer_number_from_solution(solution_text)
+                # Use question number from filename as answer number
+                answer_num = int(question_number)
                 
-                if answer_num:
-                    answer_patterns[answer_num] = answer_patterns.get(answer_num, 0) + 1
-                    
-                    # Show answer and page information (no longer requiring match)
-                    page_answer_matches += 1
-                    print(f"📄 {pdf_name}/Q{question_number}: Answer {answer_num}, Pages {pages}")
-                else:
-                    print(f"⚠️  {pdf_name}/Q{question_number}: Could not extract answer number from: {solution_text[:100]}...")
+                answer_patterns[answer_num] = answer_patterns.get(answer_num, 0) + 1
+                
+                # Show answer and page information
+                page_answer_matches += 1
+                print(f"📄 {pdf_name}/Q{question_number}: Answer {answer_num}, Pages {pages}")
         
         except Exception as e:
             print(f"❌ Error analyzing {solution_file}: {e}")
